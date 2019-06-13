@@ -7,6 +7,9 @@
 #include <SoftwareSerial.h>
 
 SoftwareSerial chat(D5, D6); // RX, TX
+//SoftwareSerial Gps(D7, D8); // RX, TX
+
+WidgetMap myMap(V20);
 
 char ssid[] = "Tawhan-Studio";
 char pass[] = "T0655577688";
@@ -14,8 +17,8 @@ char auth[] = "1c30bc20e4ab4a80ac9d80eaa040c23e";
 
 String a ="null";
 //17.321266, 104.108045
-float lat = 17.321266;
-float lon = 104.108045;
+//float lat = 17.321266;
+//float lon = 104.108045;
 
 //Status
 bool PH_sensor =false;
@@ -26,6 +29,7 @@ void setup()
   Blynk.begin(auth, ssid, pass); 
 
   chat.begin(19200);
+  // Gps.begin(38400);
    while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }
@@ -34,7 +38,7 @@ void setup()
 void loop()
 {
   Blynk.run();
-  Map_GPS((lat),lon);
+ // Map_GPS();
   Data_nano();
   
 Blynk.setProperty(V9, "url", "http://192.168.1.2:86/line.html");
@@ -42,16 +46,43 @@ Blynk.setProperty(V9, "url", "http://192.168.1.2:86/line.html");
 
 void Data_nano(){
      a = chat.readString();  //อ่าน Serial และนำไปเก็บในตัวแปร A
-   Serial.print("Data : "); 
-   Serial.println(a); 
-   pH("7");
- chat.write("Do:10:ph:13:ec:50:tm:90");
-}
-WidgetMap myMap(V20);
-void Map_GPS(float lat,float lon){
-  
-  //MAP
-myMap.location(1, lat, lon, "ตำแหน่งเรือ");
+  if(a.length()>5)
+  {
+   //==============================================================
+   String  Do =a.substring(0, a.indexOf(","));
+   Serial.print("DO : ");Serial.println(Do);
+    Blynk.virtualWrite(V31, Do);
+   //==============================================================
+   String D1=a.substring(a.indexOf(",")+1,a.length());
+   String  PH= D1.substring(0,D1.indexOf(","));
+   Serial.print("pH : ");Serial.println(PH);
+   pH(PH);
+   //==============================================================
+   String D2=D1.substring(D1.indexOf(",")+1,D1.length());
+   String  EC= D2.substring(0,D2.indexOf(","));
+   Serial.print("EC : ");Serial.println(EC);
+   Blynk.virtualWrite(V32, EC);
+   //==============================================================
+   String D3=D2.substring(D2.indexOf(",")+1,D2.length());
+   String  ORP= D3.substring(0,D3.indexOf(","));
+    Serial.print("ORP : ");Serial.println(ORP);
+     Blynk.virtualWrite(V33, ORP);
+   //==============================================================
+   String D4=D3.substring(D3.indexOf(",")+1,D3.length());
+   String  TEMP= D4.substring(0,D4.indexOf(","));
+    Serial.print("TEMP : ");Serial.println(TEMP);
+     Blynk.virtualWrite(V34, TEMP);
+   //==============================================================
+   String D5=D4.substring(D4.indexOf(",")+1,D4.length());
+   String  Lat= D5.substring(0,D5.indexOf(","));
+    Serial.print("lat : ");Serial.println(Lat);
+     String D6=D5.substring(D5.indexOf(",")+1,D5.length());
+   String  Lng= D6.substring(0,D6.indexOf(","));
+    Serial.print("lng : ");Serial.println(Lng);
+    
+     myMap.location(1, Lat, Lng, "ตำแหน่งเรือ");
+   //============================================================== 
+  }
 }
 void pH(String ph){
   /*ค่า pH
