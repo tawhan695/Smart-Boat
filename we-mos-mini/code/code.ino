@@ -1,4 +1,3 @@
-
 #define BLYNK_PRINT Serial
 
 
@@ -33,6 +32,8 @@ void setup()
    while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }
+
+   Blynk.virtualWrite(V17, 0);
 }
 
 void loop()
@@ -143,4 +144,11 @@ void pH(String ph){
      Blynk.setProperty(V30, "color", "#BF1E2E");
     
   }
+}
+BLYNK_WRITE(V17)
+{
+  int pinData = param.asInt(); 
+  chat.println(pinData);
+  Serial.print("servo :");
+  Serial.println(pinData);
 }
