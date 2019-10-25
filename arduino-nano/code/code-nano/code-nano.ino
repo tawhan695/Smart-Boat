@@ -1,5 +1,8 @@
-
-//DO SENSOR
+/*############################################################################
+ 
+                                     DO SENSOR
+                                     
+############################################################################*/
 #include <avr/pgmspace.h>
 #include <EEPROM.h>
 String DDD="";
@@ -39,49 +42,33 @@ const float SaturationValueTab[41] PROGMEM = {      //saturation dissolved oxyge
 
 int Cardi=A7;
 int VolueCAR;
-//### ส่งข้อมูล ไปยัง Arduino wemos mini d1#############
-#include <SoftwareSerial.h>
-SoftwareSerial sensor(5, 6); // RX, TX
-//SoftwareSerial Gps2(7, 8); // RX, TX
-//##################################################
 
-//############### Sensor config ####################
-String g="";
+
+/*############################################################################
+ 
+                                    config sensor
+                                     
+############################################################################*/
 int DO =A0;
 int PH =A1;
-//int ORP =A2;
 int EC =A3;
-//int TMP =D4;
-float lnt =17.321266;
-float loa =104.108045;
 
 
-
-  int sensorVal=0;
-  int enstop=0;
-  int cont=0;
-  int y=0;
-//###################################################
-
-//####################temp###########################
+/*############################################################################
+ 
+                                   temp SENSOR
+                                     
+############################################################################*/
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #define ONE_WIRE_BUS 4
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
-//##################################################3
-
-//################ The TinyGPS++ object #############
-#include <TinyGPS++.h>
-static const int RXPin = 12, TXPin = 11;
-static const uint32_t GPSBaud = 9600;
-TinyGPSPlus gps;
-SoftwareSerial ss(RXPin, TXPin);
-String LAT="0.000000";
-String LNG="0.000000";
-//##################################################3
-
-//############### ORP Sensor ####################
+/*############################################################################
+ 
+                                     orp SENSOR
+                                     
+############################################################################*/
 #define VOLTAGE 5.00 //system voltage
 #define OFFSET 0 //zero drift voltage
 //#define LED 13 //operating instructions
@@ -91,66 +78,26 @@ double orpValue;
 int orpArray[ArrayLenth];
 int orpArrayIndex=0;
 
-//##################################################3
-
-#define IN1  2
-#define IN2  3
-#define IN3  9
-#define IN4  10
-
-int i2=0;
-
-
-unsigned long startMillis;  //some global variables available anywhere in the program
-unsigned long currentMillis;
-const unsigned long period = 1600;  //the value is a number of milliseconds
 
 void setup() {
-   startMillis = millis();  //initial start time
-  Serial.begin(57600);
-  Serial.println("Run .....");
-  sensors.begin();
-  sensor.begin(19200);
-  //Gps2.begin(38400);
-  ss.begin(GPSBaud);
 
-pinMode(IN1, OUTPUT); 
-pinMode(IN2, OUTPUT); 
-pinMode(IN3, OUTPUT); 
-pinMode(IN4, OUTPUT); 
-pinMode(7, OUTPUT); 
- delayMicroseconds(1000);
-    digitalWrite(IN1, LOW); 
-     digitalWrite(IN2, LOW);
-     digitalWrite(IN3, LOW);
-     digitalWrite(IN4, LOW);
+
+
 
   pinMode(DoSensorPin,INPUT);
-   readDoCharacteristicValues();//read Characteristic Values calibrated from the EEPROM
+   readDoCharacteristicValues();
    pinMode(A4, INPUT_PULLUP);
    pinMode(8, INPUT_PULLUP);
     pinMode(Cardi, INPUT_PULLUP);
- //   Serial.println( GPSS());
+
 }
 
 void loop() { // run over and over
-  Step();
-  //=DATADO;
+
      Serial.print(DDD);
      Serial.println(("mg/L"));
  DOSENSOR();
  digitalWrite(7,1);
-// Serial.println(analogRead(Cardi));
-;
-//   if((analogRead(Cardi)>100)&&(y==2)){
-//        VolueCAR=1;
-//         Serial.println(VolueCAR);
-//         y=2;
-//          Serial.print("y " );
-//          Serial.println(y);
-//     } else 
-
-
 
 if((analogRead(Cardi)>100)&&(VolueCAR==0)){
        
@@ -225,37 +172,22 @@ sensorVal = digitalRead(A4);
     startMillis = currentMillis;  //IMPORTANT to save the start time of the current LED state.
   }
 }
-
+/*############################################################################
+ 
+                                   temp SENSOR
+                                     
+############################################################################*/
  float temp()
 {
   sensors.requestTemperatures(); 
  return sensors.getTempCByIndex(0);
 }
 
-String GPSS(){
-float latitude = gps.location.lat();
-float longitude = gps.location.lng();
-  String buf;
-  buf += String(latitude, 7);
-  buf += F(",");
-  buf += String(longitude, 7);
-  //Serial.println(buf);
-  
-smartDelay(500);
-return buf;
-}
-static void smartDelay(unsigned long ms)
-{
-  gps.encode(ss.read());
-  unsigned long start = millis();
-  do 
-  {
-    while (ss.available())
-      gps.encode(ss.read());
-  } while (millis() - start < ms);
-}
-
-//############### ORP Sensor ####################
+/*############################################################################
+ 
+                                     orp SENSOR
+                                     
+############################################################################*/
 double avergearray(int* arr, int number){
 int i;
 int max,min;
@@ -319,85 +251,11 @@ return ((int)orpValue);
 }
 
 
-void Step() {
- //  Serial.println("##############################");
-    sensorVal = digitalRead(A4);
-    enstop = digitalRead(8);
-  //   Serial.println(sensorVal);
-  //Serial.println(enstop);
-
- if((sensorVal ==0)&&(enstop==1)){  
- while((sensorVal ==0)&&(enstop==1)){
-  sensorVal = digitalRead(A4);
-  enstop = digitalRead(8);
-   digitalWrite(7,0);
- //  Serial.println(sensorVal);
-  // Serial.println(enstop);
-       digitalWrite(IN1, 1); 
-     digitalWrite(IN2, 1);
-     digitalWrite(IN3, 0);
-     digitalWrite(IN4, 0);
-      delay(3);
-     digitalWrite(IN1, 1); 
-     digitalWrite(IN2, 0);
-     digitalWrite(IN3,0);
-     digitalWrite(IN4,1);
-      delay(3);
-       digitalWrite(IN1,0); 
-     digitalWrite(IN2, 0);
-     digitalWrite(IN3, 1);
-     digitalWrite(IN4, 1);
-     delay(3);
-     digitalWrite(IN1, 0); 
-     digitalWrite(IN2, 1);
-     digitalWrite(IN3, 1);
-     digitalWrite(IN4, 0);
-     delay(3);
-      cont-=1;
-       Serial.print("      ");
-        Serial.println(cont);
-       }
-    }else if(sensorVal ==1){
-    while((cont<=11500)&&(sensorVal ==1)){
-  sensorVal = digitalRead(A4);
-  enstop = digitalRead(8);
-   digitalWrite(7,0);
-  // Serial.println(sensorVal);
- //  Serial.println(enstop);
-     digitalWrite(IN1, 1); 
-     digitalWrite(IN2, 1);
-     digitalWrite(IN3, 0);
-     digitalWrite(IN4, 0);
-      delay(3);
-     digitalWrite(IN1, 0); 
-     digitalWrite(IN2, 1);
-     digitalWrite(IN3,1);
-     digitalWrite(IN4,0);
-      delay(3);
-       digitalWrite(IN1,0); 
-     digitalWrite(IN2, 0);
-     digitalWrite(IN3, 1);
-     digitalWrite(IN4, 1);
-     delay(3);
-     digitalWrite(IN1, 1); 
-     digitalWrite(IN2, 0);
-     digitalWrite(IN3, 0);
-     digitalWrite(IN4, 1);
-     delay(3);
-     cont+=1;
-         Serial.print("      ");
-        Serial.println(cont);
-           }
-      }else {
-     digitalWrite(IN1, 0); 
-     digitalWrite(IN2, 0);
-     digitalWrite(IN3, 0);
-     digitalWrite(IN4, 0);
-  }
-}
-
-
-//do sensor
+/*############################################################################
+ 
+                                     do SENSOR
+                                     
+############################################################################*/
 
 void DOSENSOR()
 {
@@ -427,19 +285,11 @@ void DOSENSOR()
         analogBufferTemp[copyIndex]= analogBuffer[copyIndex];
       }
       averageVoltage = getMedianNum(analogBufferTemp,SCOUNT) * (float)VREF / 1024.0; // read the value more stable by the median filtering algorithm
-//      Serial.print(F("Temperature:"));
-//      Serial.print(temperature,1);
-//      Serial.print(F("^C"));
+
       doValue = pgm_read_float_near( &SaturationValueTab[0] + (int)(SaturationDoTemperature+0.5) ) * averageVoltage / SaturationDoVoltage;  //calculate the do value, doValue = Voltage / SaturationDoVoltage * SaturationDoValue(with temperature compensation)
-//      Serial.print(F(",  DO Value:"));
-   //  Serial.print(doValue,2);
+
      DDD=doValue;
-     
-  //   Serial.println(F("mg/L"));
-  //    lcd2.clear();
-  //    lcd2.print(0,0,"Value:");
-  //     lcd2.print(8,0,doValue);
-   }
+
 
    if(serialDataAvailable() > 0)
    {
