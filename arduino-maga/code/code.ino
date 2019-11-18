@@ -1,11 +1,85 @@
+/*
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+1.การต่อขา gps เข้ากับ arduino
+          arduino || GPS 
+              5V -> Vcc
+              GND -> GND
+              ขา15 -> Tx
+              ขา14 -> Rx
+
+2.serial การส่งข้อมูลของ arduino
+
+          arduino Mega 2560   ||   wemos mini d1 เป็นตัวรับไวไฟ
+                    ขา     16 ->  ขา D1
+                    ขา     17 -> ขา  D2
+          
+          เป็นการส่อสารแบบอนุกรม
+
+3.
+
+4.
+
+5.
+
+6.
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+*/
+
+int pump_in  = 12;
+int pump_out = 13;
+
+int Status = 0;
+
+const int in1Pin = 5;  // H-Bridge input pins
+
+const int in2Pin = 4;
+
+const int in3Pin = 3;  // H-Bridge pins for second motor
+
+const int in4Pin = 2;
+String DDD;
+
+#include <avr/pgmspace.h>
+#include <EEPROM.h>
+
+
+#include <TinyGPS++.h>
+TinyGPSPlus gps;
+
+float longitude;
+String incomingByte;
+float latitude;
+
+
+int setTime = 0;
+unsigned long previousTime = 3000; 
+
+
+unsigned long previousMillis = 0;        
+int sec = 0, minn = 0;
+
+
+
+
+/*############################################################################
+ 
+                                    config sensor
+                                     
+############################################################################*/
+int DO =A0;
+int PH =A1;
+int EC =A3;
+
+int Delay =32000;
+
+
 /*############################################################################
  
                                      DO SENSOR
                                      
 ############################################################################*/
-#include <avr/pgmspace.h>
-#include <EEPROM.h>
-String DDD="";
+
 #define DoSensorPin  A0    //dissolved oxygen sensor analog output pin to arduino mainboard
 #define VREF 5000    //for arduino uno, the ADC reference is the AVCC, that is 5000mV(TYP)
 float doValue;      //current dissolved oxygen value, unit; mg/L
@@ -40,19 +114,6 @@ const float SaturationValueTab[41] PROGMEM = {      //saturation dissolved oxyge
 6.41,
 };
 
-int Cardi=A7;
-int VolueCAR;
-
-
-/*############################################################################
- 
-                                    config sensor
-                                     
-############################################################################*/
-int DO =A0;
-int PH =A1;
-int EC =A3;
-
 
 /*############################################################################
  
@@ -61,7 +122,7 @@ int EC =A3;
 ############################################################################*/
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#define ONE_WIRE_BUS 4
+#define ONE_WIRE_BUS 10
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 /*############################################################################
@@ -78,48 +139,137 @@ double orpValue;
 int orpArray[ArrayLenth];
 int orpArrayIndex=0;
 
-
 void setup() {
+ 
+
+  // put your setup code here, to run once:
+Serial2.begin(19200);
+Serial3.begin(9600);
+Serial.begin(115200);
 
 
+pinMode(pump_in, OUTPUT);
+pinMode(pump_out, OUTPUT);
 
+ digitalWrite(pump_in,1);
+  digitalWrite(pump_out,1);
+   pinMode(DoSensorPin,INPUT);
+   readDoCharacteristicValues(); 
 
-  pinMode(DoSensorPin,INPUT);
-   readDoCharacteristicValues();
-   pinMode(A4, INPUT_PULLUP);
-   pinMode(8, INPUT_PULLUP);
-    pinMode(Cardi, INPUT_PULLUP);
+  pinMode(in1Pin, OUTPUT);
 
+  pinMode(in2Pin, OUTPUT);
+
+  pinMode(in3Pin, OUTPUT);
+
+  pinMode(in4Pin, OUTPUT);
 }
 
-void loop() { // run over and over
+void loop() {
+DOSENSOR();
 
-     Serial.print(DDD);
-     Serial.println(("mg/L"));
- DOSENSOR();
- digitalWrite(7,1);
+   //#################################################################################3
+/*
+                                  รับค่า จากบอร์ด wemos
+*/
+ //#################################################################################
 
-if((analogRead(Cardi)>100)&&(VolueCAR==0)){
-       
-        if((y==1)&&(VolueCAR==0)){
-          VolueCAR=2;
-          y+=1;
-        }
-        else if(y==0){
-          VolueCAR=1;
-            y+=1;
-        }
-         Serial.println(VolueCAR);
-         Serial.print("y " );
-         Serial.println(y);
-     }    
-     else{
-       VolueCAR=0;
-        Serial.print("         y :" );
-        Serial.println(y);
-        
-     }
-     if(VolueCAR==2){
+if (Serial2.available() > 0) {
+   incomingByte = Serial2.readString();
+   //Serial.println(incomingByte);
+   
+   if(incomingByte.toInt()==10){
+     Serial.println("Moter  up");
+
+      digitalWrite(in1Pin,HIGH);
+
+      digitalWrite(in2Pin,LOW);
+
+      digitalWrite(in3Pin,0);
+
+      digitalWrite(in4Pin,1);
+     
+   }else if(incomingByte.toInt()==11){
+    
+     Serial.println("Moter  down");
+
+      digitalWrite(in1Pin,LOW);
+
+      digitalWrite(in2Pin,HIGH);
+
+      digitalWrite(in3Pin,1);
+
+      digitalWrite(in4Pin,0);
+   }else if (incomingByte.toInt()==100){
+     Serial.println("Moter L OFF");
+      digitalWrite(in1Pin,LOW);
+
+      digitalWrite(in2Pin,LOW);
+
+      digitalWrite(in3Pin,LOW);
+
+      digitalWrite(in4Pin,LOW);
+   }
+
+   if(incomingByte.toInt()==20){
+      Serial.println("Moter L");
+      digitalWrite(in1Pin,0);
+
+      digitalWrite(in2Pin,0);
+
+      digitalWrite(in3Pin,0);
+
+      digitalWrite(in4Pin,1);
+    
+   }else if(incomingByte.toInt()==21){
+       Serial.println("Moter R ");
+       digitalWrite(in1Pin,1);
+
+      digitalWrite(in2Pin,0);
+
+      digitalWrite(in3Pin,0);
+
+      digitalWrite(in4Pin,LOW);
+   }else if(incomingByte.toInt()==200){
+
+        Serial.println("Moter R OFF");
+      digitalWrite(in1Pin,LOW);
+
+      digitalWrite(in2Pin,LOW);
+
+      digitalWrite(in3Pin,LOW);
+
+      digitalWrite(in4Pin,LOW);
+   }
+
+   if(incomingByte.toInt()==500){
+
+    if(Status==0){
+        digitalWrite(pump_in,0);
+        delay(33000);
+        digitalWrite(pump_in,1);
+        Status=1;
+    }
+
+    
+   }else if(incomingByte.toInt()==600){
+
+      if(Status==1){
+        digitalWrite(pump_out,0);
+        delay(34900);
+        digitalWrite(pump_out,1);
+        Status=0;
+    }
+    
+   }
+
+   int VolueCAR=0;
+  if(incomingByte.toInt()==999){
+    VolueCAR=1;
+  }else if(incomingByte.toInt()==888){
+     VolueCAR=2;
+  }
+       if(VolueCAR==2){
       doCalibration(2);
       delay(10000);
        doCalibration(3);
@@ -128,50 +278,95 @@ if((analogRead(Cardi)>100)&&(VolueCAR==0)){
       doCalibration(1);
      }
 
+//   if(incomingByte.toInt()==40){
+//    
+//   }else if(incomingByte.toInt()==41){
+//    
+//   }
+  }
+
+ //#################################################################################3
+
+ //                                     ส่งค่า GPS
+
+ //#################################################################################
+ if (Serial3.available() > 0){
+    if (gps.encode(Serial3.read())){
+ unsigned long currentMillis = millis();
  
-                     //****************
-                    //int IDo=500;
-                    //analogRead(A0);
-                    //int Do1=0;
-                    String Do=String(DDD);
-                    //****************
-                    int Iph=analogRead(A1);
+    if(currentMillis - previousMillis >= 3000) {
+      //Serial2.println(displayInfo());
+         //Serial.println(displayInfo());
+                     String Do=String(DDD);
+                     Serial.println(Do);
+//                    //****************
+                    int Iph=analogRead(PH);
                     int pH=map(Iph,0,1023,1,14);
                      String Ph=String(pH);
-                     //****************
+                     Serial.println(Ph);
+//                     //****************
                     String Temp=String(temp());
-                     //****************
-                    int ec=analogRead(A3);
-                    int Ec=map(ec,0,1023,0,20);//Measuring range: 1ms/cm--20ms/cm
-                    String eC=String(Ec);
-                     //****************
-                
-                    String orp=String(ORP_1());
-                     //****************
+                     Serial.println(Temp);
+//                     //****************
+//                    int ec=analogRead(EC);
+//                    int Ec=map(ec,0,1023,0,20);//Measuring range: 1ms/cm--20ms/cm
+//                    String eC=String(Ec);
+//                     Serial.println(eC);
+//                     //****************
+//                
+                     String orp=String(ORP_1());
+                     Serial.println(orp);
+//                     //****************
 
                      
     String data;
     data +=Do;data +=",";
     data +=Ph;data +=",";
-    data +=eC;data +=",";
+//    data +=eC;data +=",";
     data +=orp;data +=",";
     data +=Temp;data +=",";
-    data +=GPSS();data +=",";
+    data +=displayInfo();data +=",";
     
-sensorVal = digitalRead(A4);
-    enstop = digitalRead(8);;
-   // int Fenstop = digitalRead(8);
-   //  Serial.println(Fenstop);
-   //delay(1000);
-   //Serial.println(data);
-   currentMillis = millis();  //get the current "time" (actually the number of milliseconds since the program started)
-  if (currentMillis - startMillis >= period)  //test whether the period has elapsed
-  {
-   // Serial.println(data);
-    sensor.print(data); //if so, change the state of the LED.  Uses a neat trick to change the state
-    startMillis = currentMillis;  //IMPORTANT to save the start time of the current LED state.
-  }
+    Serial2.println(data);
+      previousMillis = currentMillis;
+    }
+ 
+    }
+ }
+  //###############################################################################
+
+ //                                   อ่านค่าจาก seonor
+
+ //################################################################################
+
+
+
 }
+
+
+
+  //###############################################################################
+
+ //                                    รับค่าจาก GPS
+
+ //################################################################################
+String displayInfo()
+{
+  if (gps.location.isValid())
+  {
+latitude = gps.location.lat();
+longitude = gps.location.lng();
+  }
+  String buf;
+  buf += String(latitude, 7);
+  buf += F(",");
+  buf += String(longitude, 7);
+  //Serial.println(buf);
+  
+
+return buf;
+}
+
 /*############################################################################
  
                                    temp SENSOR
@@ -288,7 +483,9 @@ void DOSENSOR()
 
       doValue = pgm_read_float_near( &SaturationValueTab[0] + (int)(SaturationDoTemperature+0.5) ) * averageVoltage / SaturationDoVoltage;  //calculate the do value, doValue = Voltage / SaturationDoVoltage * SaturationDoValue(with temperature compensation)
 
-     DDD=doValue;
+     DDD=String(doValue);
+//     Serial.print("Do");
+//     Serial.println(doValue);
 
 
    if(serialDataAvailable() > 0)
@@ -298,12 +495,13 @@ void DOSENSOR()
    }
 
 }
+}
 
 boolean serialDataAvailable(void)
 {
   char receivedChar;
   static unsigned long receivedTimeOut = millis();
-  while ( sensor.available() > 0 )
+  while ( Serial2.available() > 0 )
   {
     if (millis() - receivedTimeOut > 500U)
     {
@@ -311,7 +509,7 @@ boolean serialDataAvailable(void)
       memset(receivedBuffer,0,(ReceivedBufferLength+1));
     }
     receivedTimeOut = millis();
-    receivedChar = sensor.read();
+    receivedChar = Serial2.read();
     if (receivedChar == '\n' || receivedBufferIndex == ReceivedBufferLength)
     {
     receivedBufferIndex = 0;
